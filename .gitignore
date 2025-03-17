@@ -30,5 +30,15 @@
 *.exe
 *.out
 *.app
-/.vs/public/FileContentIndex
-/.vs
+
+#logs
+*.tlog
+*.log
+
+#others
+*.idb
+**.vs
+
+#compilation folders
+**Debug
+**Release
