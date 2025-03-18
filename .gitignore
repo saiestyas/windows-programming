@@ -43,3 +43,4 @@
 **Debug
 **Release
 /hooks/executables/x64
+/hooks/utilities/messageBox
