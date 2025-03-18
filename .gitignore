@@ -42,3 +42,4 @@
 #compilation folders
 **Debug
 **Release
+/hooks/executables/x64
