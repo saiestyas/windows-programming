@@ -6,7 +6,7 @@ As a result of the hooking process, a log file, named commInject.log, is created
 connection, buffer sended to destination and socket closing.
 
 There are 4 folders:
-  - helloc2: Simple programa that opens a tcp connection using sockets. helloc2 <ip_address> <port>
+  - helloc2: Simple program used to test the hooking funcionality. helloc2 opens a tcp connection using sockets. helloc2 <ip_address> <port>
   - autohook_helloc2: Poc, Here I'm using MinHook library as a first step to test if the implementation is correct.
   - hookcomms: DLL where the hooking process is implemented.
   - injector: Simple dll injector by creating a remotethread
