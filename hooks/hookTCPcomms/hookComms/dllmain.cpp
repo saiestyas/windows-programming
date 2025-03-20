@@ -195,7 +195,6 @@ bool unHook() {
     send_err =    MH_DisableHook(&send);
     connect_err = MH_DisableHook(&connect);
     socket_err =  MH_DisableHook(&socket);
-    socket_err =  MH_DisableHook(&socket);
     closesocket = MH_DisableHook(&closesocket);
 
     if (send_err != MH_OK) {
