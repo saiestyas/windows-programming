@@ -1,9 +1,10 @@
 // autohooks_createfile.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-
+#define _CRT_RAND_S
 
 #include <iostream>
+#include <stdlib.h>
 #include <fstream>
 #include <windows.h>
 #include ".\headers\Release_MT_x64\MinHook.h"
@@ -11,13 +12,16 @@
 #include <ctime>
 #include <map>
 #include <codecvt>
-using namespace std;
-string  store_path  = "C:\\ProgramData\\drooper_hooks\\";
-wstring wstore_path = L"C:\\ProgramData\\drooper_hooks\\";
-string logFile = store_path + "dropper.logs";
+#include <algorithm>
+#include <processthreadsapi.h>
 
-static bool isHookingInProgress = FALSE;
-static bool isHookingWrite      = FALSE;
+using namespace std;
+string  store_path   =  "C:\\ProgramData\\drooper_hooks\\";  //path where you want to store results
+wstring wstore_path  = L"C:\\ProgramData\\drooper_hooks\\"; //wstring version
+string  logFile      = store_path + "dropper.logs";        //Complete path of the log file
+//Complete path where the childLogger is located
+string  logger_path  = "C:\\Users\\yassin.said\\source\\repos\\public\\hooks\\dropper_hooks\\childLogger\\x64\\Release\\childLogger.exe";
+
 //hook funcionality
 //start this before hook installition
 BOOL prepare_setup() {
@@ -73,9 +77,67 @@ string getTime() {
     char tmBuff[30] = {};
     ctime_s(tmBuff, sizeof(tmBuff), &now);
     string timestamp = tmBuff;
-    size_t slash_n = timestamp.find("\n");
-    return timestamp.substr(0, slash_n);
+    replace(timestamp.begin(), timestamp.end(), '\n', ','); //replace all \n to , 
+    replace(timestamp.begin(), timestamp.end(), ' ', '_'); //replace all spaces to _ 
+    return timestamp;
 }
+
+int call_childLogger(string log) {
+    string sCmdLine = logger_path + " " + log;
+    LPSTR  cmdline = &sCmdLine[0];
+
+
+        STARTUPINFOA si;
+        PROCESS_INFORMATION pi;
+
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+
+        // Start the child process. 
+        if (!CreateProcessA(
+            NULL,   // No module name (use command line)
+            cmdline,        // Command line
+            NULL,           // Process handle not inheritable
+            NULL,           // Thread handle not inheritable
+            FALSE,          // Set handle inheritance to FALSE
+            0,              // No creation flags
+            NULL,           // Use parent's environment block
+            NULL,           // Use parent's starting directory 
+            &si,            // Pointer to STARTUPINFO structure
+            &pi)           // Pointer to PROCESS_INFORMATION structure
+            )
+        {
+
+
+            return 0;
+        }
+
+        // Wait until child process exits.
+        WaitForSingleObject(pi.hProcess, INFINITE);
+
+        // Close process and thread handles. 
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+
+        return 1;
+
+    
+}
+
+void saveBeforeDelete(LPCSTR lpfilename) {
+    std::map <string, string> fileinfo = process_filename(lpfilename);
+    string new_file = fileinfo["filename"] + "_" + fileinfo["hash_path"] + "." + fileinfo["file_Extension"];
+    string complete_path = store_path + new_file;
+
+    string log_line = getTime() + "DeleteFile" + "," + fileinfo["filepath"] + "," + fileinfo["filename"] + "." + fileinfo["file_Extension"] + "," + fileinfo["hash_path"];
+    replace(log_line.begin(), log_line.end(), ' ', '_'); //replace all spaces to _
+    call_childLogger(log_line);
+    CopyFileA(lpfilename, complete_path.c_str(), FALSE);
+}
+
+
+
 //return function declarations
 
 //CreateFileA
@@ -98,29 +160,23 @@ fnDeleteFileA call_original_deletefileA = NULL;
 using fnDeleteFileW = BOOL(WINAPI*)(LPCWSTR);
 fnDeleteFileW call_original_deletefilew = NULL;
 
+//CloseHandle
+using fnCloseHandle = BOOL(WINAPI*)(HANDLE hObject);
+fnCloseHandle call_original_CloseHandle = NULL;
+
 //hook functions - replacements
 //CreateFileA
 HANDLE WINAPI hookCreateFileA(LPCSTR ifilename, DWORD acessmode, DWORD sharemode, LPSECURITY_ATTRIBUTES secattrb, DWORD creationdisp, DWORD flagsNattributes, HANDLE htemplate) {
-    if (isHookingInProgress) {
-        return call_original_CreateFileA(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
-    }
-    isHookingInProgress = true;
-    HANDLE hFile=call_original_CreateFileA(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        isHookingInProgress = false;
-        return hFile;
-    }
-
+   
     // ProcessFileName fileinfo["filename"], fileinfo["filepath"], fileinfo["hash_path"], fileinfo["file_Extension"]
     std::map <string, string> fileinfo = process_filename((string)ifilename);
     string copy_filename = fileinfo["filename"] + "_" + fileinfo["hash_path"] + "." + fileinfo["file_Extension"];
     
-       
-    std::ofstream log_file(logFile, ios::app);
-    //log results:: TimeStamp, Operation, Original_FilePath, Original_Filename, HASH(FilePath), Local_Filename
-    log_file << getTime() << "," << "CreateFile" << "," << fileinfo["filepath"] << "," << fileinfo["filename"] << "." << fileinfo["file_Extension"] << "," << fileinfo["hash_path"] << "," << copy_filename << endl;
-    log_file.close();
-    
+    //log situation
+    string log_line = getTime() + "CreateFile" + "," + fileinfo["filepath"] + "," + fileinfo["filename"] + "." + fileinfo["file_Extension"] + "," + fileinfo["hash_path"] + "," + copy_filename;
+    replace(log_line.begin(), log_line.end(), ' ', '_'); //replace all spaces to _
+    call_childLogger(log_line);
+
     //save a copy
     string complete_path = store_path + copy_filename;
     HANDLE hcopia = call_original_CreateFileA(complete_path.c_str(), acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
@@ -128,30 +184,20 @@ HANDLE WINAPI hookCreateFileA(LPCSTR ifilename, DWORD acessmode, DWORD sharemode
     if (hcopia != INVALID_HANDLE_VALUE)
         CloseHandle(hcopia);
 
-    isHookingInProgress = false;
-    return hFile;
+    
+    return call_original_CreateFileA(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);;
 }
 
 //CreateFileW
 HANDLE WINAPI hookCreateFileW(LPCWSTR ifilename, DWORD acessmode, DWORD sharemode, LPSECURITY_ATTRIBUTES secattrb, DWORD creationdisp, DWORD flagsNattributes, HANDLE htemplate) {
- 
-
-    if (isHookingInProgress) {
-        return call_original_CreateFileW(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
-    }
-    isHookingInProgress = TRUE;
-    HANDLE hFile = call_original_CreateFileW(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
-
     
     // ProcessFileName fileinfo["filename"], fileinfo["filepath"], fileinfo["hash_path"], fileinfo["file_Extension"]
     std::map <string, string> fileinfo = process_filename(wstring_tostring(ifilename));
     string copy_filename = fileinfo["filename"] + "_" + fileinfo["hash_path"] + "." + fileinfo["file_Extension"];
 
-
-    std::ofstream log_file(logFile, ios::app);
-    //log results:: TimeStamp, Operation, Original_FilePath, Original_Filename, HASH(FilePath), Local_Filename
-    log_file << getTime() << "," << "CreateFile" << "," << fileinfo["filepath"] << "," << fileinfo["filename"] << "." << fileinfo["file_Extension"] << "," << fileinfo["hash_path"] << "," << copy_filename << endl;
-    log_file.close();
+    string log_line =  getTime() + "CreateFile" + "," + fileinfo["filepath"] + "," + fileinfo["filename"] + "." + fileinfo["file_Extension"] + "," + fileinfo["hash_path"] + "," + copy_filename;
+    replace(log_line.begin(), log_line.end(), ' ', '_'); //replace all spaces to _
+    call_childLogger(log_line);
 
     //save a copy
     string complete_path = store_path + copy_filename;
@@ -161,61 +207,73 @@ HANDLE WINAPI hookCreateFileW(LPCWSTR ifilename, DWORD acessmode, DWORD sharemod
     if (hcopia != INVALID_HANDLE_VALUE)
         CloseHandle(hcopia);
 
-    isHookingInProgress = FALSE;
-    return hFile;
+    
+    return call_original_CreateFileW(ifilename, acessmode, sharemode, secattrb, creationdisp, flagsNattributes, htemplate);
     
 }
 
 //WriteFileEx
 BOOL WINAPI  hookWriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberofbytesWritten, LPOVERLAPPED lpOverlaped) {
     
-    //MessageBoxA(nullptr, "You are writing file!", "WriteFile hook", MB_ICONINFORMATION);
-    if (isHookingWrite) {
-        return call_original_writefile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberofbytesWritten, lpOverlaped);
+//write log 
+    if (hFile != INVALID_HANDLE_VALUE) {
+        char filePath[MAX_PATH];
+        if (GetFinalPathNameByHandleA(hFile, filePath,MAX_PATH,FILE_NAME_NORMALIZED)) {
+            BOOL result = call_original_writefile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberofbytesWritten, lpOverlaped);
+            //log situation
+            string log_line = getTime() + "WriteFile,"+filePath;
+            replace(log_line.begin(), log_line.end(), ' ', '_'); //replace all spaces to _
+            call_childLogger(log_line);
+            return result;
+        }
     }
-    
-    isHookingWrite = true;
-    
-    std::ofstream log_file(logFile, ios::app);
-    //log results:: TimeStamp, Operation, Original_FilePath, Original_Filename, HASH(FilePath), Local_Filename
-    time_t now = time(NULL);
-    char tmBuff[30] = {};
-    ctime_s(tmBuff, sizeof(tmBuff), &now);
-    string timestamp = tmBuff;
-    size_t slash_n = timestamp.find("\n");
-    log_file << timestamp.substr(0, slash_n) << "," << "WriteFile" << endl;
-    log_file.close();
 
-    return isHookingWrite;
+    //log situation
+    string log_line = getTime() + "WriteFile,UNKNOWN";
+    call_childLogger(log_line);
+
+    return call_original_writefile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberofbytesWritten, lpOverlaped);
+    
+}
+
+
+BOOL WINAPI hookCloseHandle(HANDLE hObject) {
+    char filePath[MAX_PATH];
+
+    if (hObject != INVALID_HANDLE_VALUE) {
+        if (GetFileType(hObject) == FILE_TYPE_DISK) {
+            if (GetFinalPathNameByHandleA(hObject, filePath, MAX_PATH, FILE_NAME_NORMALIZED)) {
+                bool result = call_original_CloseHandle(hObject);
+                if (result != 0) { //if the hObject was released, get a file copy 
+                    std::map <string, string> fileinfo = process_filename(filePath);
+                    unsigned int seed;
+                    rand_s(&seed);
+                    string filename = store_path + fileinfo["filename"] + "_" + to_string(seed) + ".tmp";
+                    CopyFileA(filePath, filename.c_str(), FALSE);
+                }
+                //in case of bad handle closing, return
+                return result;
+            }
+        }
+    }
+    return call_original_CloseHandle(hObject);
 }
 
 BOOL WINAPI hookDeleteFileA(LPCSTR lpfilename) {
-
-    std::map <string, string> fileinfo = process_filename(lpfilename);
-    string new_file = fileinfo["filename"] + "_" + fileinfo["hash_path"] + "." + fileinfo["file_Extension"];
-    string complete_path = store_path + new_file;
-    std::ofstream log_file(logFile, ios::app);
-    //log results:: TimeStamp, Operation, Original_FilePath, Original_Filename, HASH(FilePath), Local_Filename
-    log_file << getTime() << "," << "DeleteFile" << "," << fileinfo["filepath"] << "," << fileinfo["filename"] << "." << fileinfo["file_Extension"] << endl;
-    log_file.close();
-    CopyFileA(lpfilename, complete_path.c_str(), FALSE);
-
+    saveBeforeDelete(lpfilename);
+    
     return call_original_deletefileA(lpfilename);
 }
 
 BOOL WINAPI hookDeleteFileW(LPCWSTR lpfilename) {
-  
-    std::map <string, string> fileinfo = process_filename(wstring_tostring(lpfilename));
-    string new_file = fileinfo["filename"] + "_" + fileinfo["hash_path"] + "." + fileinfo["file_Extension"];
-    wstring wcomplete_path = wstore_path + string_towstring(new_file);
-    std::ofstream log_file(logFile, ios::app);
-    //log results:: TimeStamp, Operation, Original_FilePath, Original_Filename, HASH(FilePath), Local_Filename
-    log_file << getTime() << "," << "DeleteFile" << "," << fileinfo["filepath"] << "," << fileinfo["filename"] << "." << fileinfo["file_Extension"] << endl;
-    log_file.close();
-    CopyFileW(lpfilename, wcomplete_path.c_str(), FALSE);
+    string sfilename = wstring_tostring(lpfilename);
+    saveBeforeDelete(sfilename.c_str());
+
     
     return call_original_deletefilew(lpfilename);
 }
+
+
 
 //install the hooks
 bool installHookCreateFileA() {
@@ -247,6 +305,15 @@ bool installHookWriteFile() {
     }
 
     return TRUE;
+}
+
+bool installHookCloseHandle() {
+    MH_STATUS mhResult = MH_CreateHook(&CloseHandle, &hookCloseHandle, reinterpret_cast<LPVOID*>(&call_original_CloseHandle));
+    if (mhResult != MH_OK) {
+        cout << "WriteFile HOOK: MH_Initialize Failed with error: " << mhResult << endl;
+        return FALSE;
+    }
+
 }
 
 bool installHookDeleteFileA() {
@@ -283,7 +350,8 @@ bool installHooks() {
     // install all hooks ~ disabled state
     installHookCreateFileA();
     installHookCreateFileW(); 
-    //installHookWriteFile(); DISABLED
+    installHookWriteFile(); 
+    installHookCloseHandle();
     installHookDeleteFileA();
     installHookDeleteFileW();
     
@@ -300,12 +368,16 @@ bool installHooks() {
 
     }
 
-    /* DISABLED
+    
     if (MH_EnableHook(&WriteFile) != MH_OK) {
         cout << "ENABLE WriteFile HOOK: MH_EnableHook Failed with error: " << GetLastError() << endl;
         
-    }*/
+    }
 
+
+    if (MH_EnableHook(&CloseHandle) != MH_OK) {
+        cout << "ENABLE CloseHandle HOOK: MH_EnableHook Failed with error: " << GetLastError() << endl;
+    }
 
     if (MH_EnableHook(&DeleteFileA) != MH_OK) {
         cout << "ENABLE DeleteFileA HOOK: MH_EnableHook Failed with error: " << GetLastError() << endl;
@@ -347,7 +419,7 @@ bool disableHooks() {
         }
     }
       
-    /*DISABLED
+    
     mhResult = MH_DisableHook(&WriteFile);
     if (mhResult != MH_OK) {
         cout << "[!] Disabling WriteFile HOOK: MH_DisabbleHook Failed with error: " << mhResult << endl;
@@ -359,7 +431,17 @@ bool disableHooks() {
         }
     }
 
-    */
+    mhResult = MH_DisableHook(&CloseHandle);
+    if (mhResult != MH_OK) {
+        cout << "[!] Disabling CloseHandle HOOK: MH_DisabbleHook Failed with error: " << mhResult << endl;
+    }
+    else {
+        mhResult = MH_RemoveHook(&CloseHandle);
+        if (mhResult != MH_OK) {
+            cout << "[!] Removing CloseHandle HOOK: MH_RemoveHook Failed with error: " << mhResult << endl;
+        }
+    }
+    
     mhResult = MH_DisableHook(&DeleteFileW);
     if (mhResult != MH_OK) {
         cout << "[!] Disabling DeleteFileW HOOK: MH_DisabbleHook Failed with error: " << mhResult << endl;
