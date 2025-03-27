@@ -133,6 +133,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="autohooks_createfile.cpp" />
+    <ClCompile Include="globals.cpp" />
+    <ClCompile Include="hooks.cpp" />
+    <ClCompile Include="utilities.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="globals.h" />
+    <ClInclude Include="headers.h" />
+    <ClInclude Include="hooks.h" />
+    <ClInclude Include="utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
