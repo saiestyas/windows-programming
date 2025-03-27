@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{bc784cf8-f52b-4231-804d-4005a8c71e73}</ProjectGuid>
+    <ProjectGuid>{e7f56973-1a47-4bbf-a7da-5a75a8c1adf4}</ProjectGuid>
     <RootNamespace>childLogger</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

@@ -18,10 +18,10 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-
+    
     file << argv[1] << endl;
     file.close();
-
+    
 
     return 0;
 }

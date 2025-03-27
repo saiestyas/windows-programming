@@ -45,4 +45,3 @@
 /hooks/executables/x64
 /hooks/utilities/messageBox
 /hooks/dropper_hooks/create_files
-/hooks/dropper_hooks/auto_hooks_createfile
