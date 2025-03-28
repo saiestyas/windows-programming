@@ -1,5 +1,6 @@
 Prove of concept of a hooking dll that if injected in a process is able to log operation related to file creation, write or deletion and it also creates copies of the files created by the victim process.
-Reminder: The injector, located in the utilities folder, is prepared to create a process in suspended mode, remotly inject the dll and resume the process. 
+
+- Reminder: The injector, located in the utilities folder, is prepared to create a process in suspended mode, remotly inject the dll and resume the process. 
 
 - Usage: 
 injector.exe <fullpath_exe_under_test> <fullpath_dropper.hooks.dll>
