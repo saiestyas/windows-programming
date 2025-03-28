@@ -24,7 +24,6 @@
 *.lai
 *.la
 *.a
-*.lib
 
 # Executables
 *.exe
@@ -45,3 +44,4 @@
 /hooks/executables/x64
 /hooks/utilities/messageBox
 /hooks/dropper_hooks/create_files
+/hooks/hookTCPcomms/autohook_helloc2/packages/minhook.1.3.3/lib/native/lib
