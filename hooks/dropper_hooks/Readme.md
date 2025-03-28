@@ -7,10 +7,10 @@ injector.exe <fullpath_exe_under_test> <fullpath_dropper.hooks.dll>
 
 Hooks:  CreateFileA/W, WriteFile, DeleteFileA/W and CloseHandle.
 
-CreateFileA/W -> Creates a new log entry and also creates the same file in dropper_hooks folder (it's empty bc it's just file creation, nevertheless knowing that something was created it's useful in case any of the recovery file attemps files. As last resource, I encourage you to check if it's still in the creation  original path)
-WriteFile     -> Creates a new log entry, the object (file) is occupied so any attempt of file manipulation ends with a violation access error, so, just logs. Any try of file creation (in this hook), take the handle and perform the write will result in a hook loop.
-DeleteFileA/W -> Before deletion, copyfile and log operation.
-CloseHandle   -> If there is a closehandle of a file, then the file is released and is accesible, so get a copy of it!
+- CreateFileA/W -> Creates a new log entry and also creates the same file in dropper_hooks folder (it's empty bc it's just file creation, nevertheless knowing that something was created it's useful in case any of the recovery file attemps files. As last resource, I encourage you to check if it's still in the creation  original path)
+- WriteFile     -> Creates a new log entry, the object (file) is occupied so any attempt of file manipulation ends with a violation access error, so, just logs. Any try of file creation (in this hook), take the handle and perform the write will result in a hook loop.
+- DeleteFileA/W -> Before deletion, copyfile and log operation.
+- CloseHandle   -> If there is a closehandle of a file, then the file is released and is accesible, so get a copy of it!
 
 
 By default
